@@ -74,16 +74,14 @@ RemoteWarpBase::RemoteWarpBase(const std::string& name, const WarpSettings& sett
     
     RUI_SHARE_PARAM_WCN(warpName+"-save",saveGroup);
     RUI_SHARE_PARAM_WCN(warpName+"-show",show);
-    RUI_SHARE_PARAM_WCN(warpName+"-width",width, 0, windowSize.x);
-    RUI_SHARE_PARAM_WCN(warpName+"-height",height,0, windowSize.y);
-    RUI_SHARE_PARAM_WCN(warpName+"-src x",srcArea.x, 0, windowSize.x);
-    RUI_SHARE_PARAM_WCN(warpName+"-src y",srcArea.y, 0, windowSize.y);
-    RUI_SHARE_PARAM_WCN(warpName+"-src width",srcArea.width, 0, windowSize.x);
-    RUI_SHARE_PARAM_WCN(warpName+"-src height",srcArea.height, 0, windowSize.y);
+    RUI_SHARE_PARAM_WCN(warpName+"-src x",srcArea.x, -width, width);
+    RUI_SHARE_PARAM_WCN(warpName+"-src y",srcArea.y, -height, height);
+    RUI_SHARE_PARAM_WCN(warpName+"-src width",srcArea.width, 0,width);
+    RUI_SHARE_PARAM_WCN(warpName+"-src height",srcArea.height, 0, height);
     RUI_SHARE_PARAM_WCN(warpName+"-draw x",drawArea.x, 0, ofGetWidth());
     RUI_SHARE_PARAM_WCN(warpName+"-draw y",drawArea.y, 0, ofGetHeight());
-    RUI_SHARE_PARAM_WCN(warpName+"-draw width",windowSize.x, 0, ofGetWidth());
-    RUI_SHARE_PARAM_WCN(warpName+"-draw height",windowSize.y, 0, ofGetHeight());
+    RUI_SHARE_PARAM_WCN(warpName+"-draw width",drawArea.width, 0, windowSize.x);
+    RUI_SHARE_PARAM_WCN(warpName+"-draw height",drawArea.height, 0, windowSize.y);
     RUI_SHARE_PARAM_WCN(warpName+"-brightness", brightness,0.0,1.0);
     RUI_SHARE_PARAM_WCN(warpName+"-luminance red", luminance.r, 0., 1.);
     RUI_SHARE_PARAM_WCN(warpName+"-luminance green", luminance.g, 0., 1.);

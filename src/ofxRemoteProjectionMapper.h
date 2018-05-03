@@ -48,10 +48,10 @@ public:
             return warp->getName() == name;
         });
         if(found != mappings.end()){
-            return *found;
+            return std::dynamic_pointer_cast<WarpType>(*found);
         }else{
             mappings.emplace_back(std::make_shared<WarpType>( name, settings, std::forward<Args>(args)... ));
-            return mappings.back();
+            return std::dynamic_pointer_cast<WarpType>(mappings.back());
         }
     }
     
