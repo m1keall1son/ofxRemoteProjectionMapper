@@ -56,7 +56,8 @@ void ofxRemoteProjectionMapper::handleKeyPress(ofKeyEventArgs& args)
             selectedMappings.clear();
             selectionArea = ofRectangle(0,0,0,0);
         }else{
-            mappings[focusedMappingIndex]->deselectControlPoint(prevSelectedIndex);
+            if(focusedMappingIndex >= 0 && focusedMappingIndex < mappings.size())
+                mappings[focusedMappingIndex]->deselectControlPoint(prevSelectedIndex);
         }
     }
 }
@@ -76,6 +77,13 @@ std::shared_ptr<RemoteWarpBase> ofxRemoteProjectionMapper::getWarp(const std::st
     }else{
         ofLogWarning() << "couldn't find mapping with name " << name;
         return nullptr;
+    }
+}
+
+void ofxRemoteProjectionMapper::toggleEditing()
+{
+    for(auto& map: mappings){
+        map->setEditing(!map->isEditing());
     }
 }
 
@@ -139,8 +147,10 @@ void ofxRemoteProjectionMapper::selectClosestControlPoint(int x, int y)
     if(warpIdx == focusedMappingIndex && prevSelectedIndex == pointIdx )
         return;
     
-    mappings[focusedMappingIndex]->deselectControlPoint(prevSelectedIndex);
-    mappings[warpIdx]->selectControlPoint(pointIdx);
+    if(focusedMappingIndex < mappings.size() && focusedMappingIndex >=0)
+        mappings[focusedMappingIndex]->deselectControlPoint(prevSelectedIndex);
+    if(warpIdx < mappings.size() && warpIdx >= 0 )
+        mappings[warpIdx]->selectControlPoint(pointIdx);
     
     focusedMappingIndex = warpIdx;
     prevSelectedIndex = pointIdx;

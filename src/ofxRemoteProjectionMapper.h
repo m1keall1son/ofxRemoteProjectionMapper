@@ -63,6 +63,8 @@ public:
     
     void selectClosestControlPoint(int x, int y);
     void selectControlPoints(const ofRectangle& area);
+    
+    void toggleEditing();
 
 private:
     
