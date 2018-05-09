@@ -152,44 +152,46 @@ void RemoteWarpPerspectiveBilinear::reset(const glm::vec2 & scale, const glm::ve
 glm::vec2 RemoteWarpPerspectiveBilinear::getControlPoint(size_t index)
 {
     // Depending on index, return perspective or bilinear control point.
-    if (this->isCorner(index))
-    {
-        // Perspective: simply return one of the corners.
-        return remoteCorners[(this->convertIndex(index))];
-    }
-    else
-    {
+//    if (this->isCorner(index))
+//    {
+//        // Perspective: simply return one of the corners.
+//        return remoteCorners[(this->convertIndex(index))];
+//    }
+//    else
+//    {
         // Bilinear: transform control point from warped space to normalized screen space.
-        auto cp = RemoteWarpBase::getControlPoint(index) * getSize();
+        auto s = glm::vec2(drawArea.width, drawArea.height);
+        auto cp = RemoteWarpBase::getControlPoint(index) * s + drawArea.getTopLeft();
         auto pt = getTransform() * glm::vec4(cp.x, cp.y, 0.0f, 1.0f);
         
         if (pt.w != 0) pt.w = 1.0f / pt.w;
         pt *= pt.w;
         
-        return glm::vec2(pt.x, pt.y) / this->windowSize;
-    }
+        return glm::vec2(pt.x, pt.y) / s;
+    //}
 }
 
 //--------------------------------------------------------------
 void RemoteWarpPerspectiveBilinear::setControlPoint(size_t index, const glm::vec2 & pos)
 {
     // Depending on index, set perspective or bilinear control point.
-    if (this->isCorner(index))
-    {
-        // Perspective: simply set the control point.
-        remoteCorners[convertIndex(index)] = pos;
-    }
-    else
-    {
+//    if (this->isCorner(index))
+//    {
+//        // Perspective: simply set the control point.
+//        remoteCorners[convertIndex(index)] = pos;
+//    }
+//    else
+//    {
         // Bilinear:: transform control point from normalized screen space to warped space.
-        auto cp = pos * this->windowSize;
+        auto s = glm::vec2(drawArea.width, drawArea.height);
+        auto cp = pos * s;
         auto pt = getTransformInverted() * glm::vec4(cp.x, cp.y, 0.0f, 1.0f);
         
         if (pt.w != 0) pt.w = 1.0f / pt.w;
-        pt *= pt.w;
+        pt *= pt.w; 
         
-        RemoteWarpBase::setControlPoint(index, glm::vec2(pt.x, pt.y) / getSize());
-    }
+        RemoteWarpBase::setControlPoint(index, glm::vec2(pt.x, pt.y) / s);
+   // }
 }
 
 //--------------------------------------------------------------
@@ -226,10 +228,10 @@ void RemoteWarpPerspectiveBilinear::selectControlPoint(size_t index)
 }
 
 //--------------------------------------------------------------
-void RemoteWarpPerspectiveBilinear::deselectControlPoint()
+void RemoteWarpPerspectiveBilinear::deselectControlPoint(size_t index)
 {
    // this->warpPerspective->deselectControlPoint();
-    RemoteWarpBase::deselectControlPoint();
+    RemoteWarpBase::deselectControlPoint(index);
 }
 
 //--------------------------------------------------------------
@@ -253,7 +255,7 @@ void RemoteWarpPerspectiveBilinear::rotateCounterclockwise()
 //--------------------------------------------------------------
 bool RemoteWarpPerspectiveBilinear::handleCursorDown(const glm::vec2 & pos)
 {
-    if (!this->editing || this->selectedIndex >= this->controlPoints.size()) return false;
+    //if (!this->editing || this->selectedIndex >= this->controlPoints.size()) return false;
     
 //    // Depending on selected control point, let perspective or bilinear warp handle it.
 //    if (this->isCorner(this->selectedIndex))
@@ -266,7 +268,7 @@ bool RemoteWarpPerspectiveBilinear::handleCursorDown(const glm::vec2 & pos)
 //--------------------------------------------------------------
 bool RemoteWarpPerspectiveBilinear::handleCursorDrag(const glm::vec2 & pos)
 {
-    if (!this->editing || this->selectedIndex >= this->controlPoints.size()) return false;
+    //if (!this->editing || this->selectedIndex >= this->controlPoints.size()) return false;
     
 //    // Depending on selected control point, let perspective or bilinear warp handle it.
 //    if (this->isCorner(this->selectedIndex))

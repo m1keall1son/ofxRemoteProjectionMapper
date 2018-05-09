@@ -34,7 +34,36 @@ void ofxRemoteProjectionMapper::init(bool initRemoteUI, int port, float updateIn
     RUI_SHARE_PARAM_WCN("create bilinear warp",doCreateBilinearWarp);
     RUI_SHARE_PARAM_WCN("create perp bilinear warp",doCreatePerspectiveBilinearWarp);
     
+    ofAddListener(ofEvents().mouseMoved, this, &ofxRemoteProjectionMapper::handleMouseMove);
+    ofAddListener(ofEvents().mouseDragged, this, &ofxRemoteProjectionMapper::handleMouseDrag);
+    ofAddListener(ofEvents().mousePressed, this, &ofxRemoteProjectionMapper::handleMouseDown);
+    ofAddListener(ofEvents().mouseReleased, this, &ofxRemoteProjectionMapper::handleMouseUp);
+    ofAddListener(ofEvents().keyPressed, this, &ofxRemoteProjectionMapper::handleKeyPress);
+    ofAddListener(ofEvents().keyReleased, this, &ofxRemoteProjectionMapper::handleKeyReleased);
+
     loadWarps();
+}
+
+void ofxRemoteProjectionMapper::handleKeyPress(ofKeyEventArgs& args)
+{
+    if(args.key == OF_KEY_CONTROL){
+        selectingMultiple = !selectingMultiple;
+        if(!selectingMultiple){
+            selectionAreaSet = false;
+            for(auto & warp : mappings){
+                warp->deselectAllControlPoints();
+            }
+            selectedMappings.clear();
+            selectionArea = ofRectangle(0,0,0,0);
+        }else{
+            mappings[focusedMappingIndex]->deselectControlPoint(prevSelectedIndex);
+        }
+    }
+}
+
+void ofxRemoteProjectionMapper::handleKeyReleased(ofKeyEventArgs& args)
+{
+
 }
 
 std::shared_ptr<RemoteWarpBase> ofxRemoteProjectionMapper::getWarp(const std::string& name)
@@ -54,6 +83,120 @@ void ofxRemoteProjectionMapper::drawWarps(const ofTexture& tex)
 {
     for(auto & warp: mappings){
         warp->drawWarp(tex);
+    }
+    
+    if(selectingMultiple && !selectionAreaSet){
+        ofPushStyle();
+        ofNoFill();
+        ofSetColor(255, 255, 0, 128);
+        ofDrawRectangle(selectionArea);
+        ofFill();
+        ofSetColor(100, 100, 100, 50);
+        ofDrawRectangle(selectionArea);
+        ofPopStyle();
+    }
+    
+}
+
+void ofxRemoteProjectionMapper::selectControlPoints(const ofRectangle& area)
+{
+    std::map<size_t, std::vector<size_t>> selectedWarps;
+    for (int i = mappings.size() - 1; i >= 0; --i){
+        auto selections = mappings[i]->getControlPointsInArea(area);
+        if(!selections.empty()){
+            selectedWarps.emplace( i, std::move(selections) );
+        }
+    }
+    
+    for(auto & found: selectedWarps){
+        selectedMappings.push_back(found.first);
+        for(auto & ind : found.second){
+            mappings[found.first]->selectControlPoint(ind);
+        }
+    }
+}
+
+//--------------------------------------------------------------
+void ofxRemoteProjectionMapper::selectClosestControlPoint(int x, int y)
+{
+    size_t warpIdx = -1;
+    size_t pointIdx = -1;
+    auto distance = std::numeric_limits<float>::max();
+    
+    // Find warp and distance to closest control point.
+    for (int i = mappings.size() - 1; i >= 0; --i)
+    {
+        float candidate;
+        auto idx = mappings[i]->findClosestControlPoint(glm::vec2(x,y), &candidate);
+        if (candidate < distance && mappings[i]->isEditing())
+        {
+            distance = candidate;
+            pointIdx = idx;
+            warpIdx = i;
+        }
+    }
+    
+    if(warpIdx == focusedMappingIndex && prevSelectedIndex == pointIdx )
+        return;
+    
+    mappings[focusedMappingIndex]->deselectControlPoint(prevSelectedIndex);
+    mappings[warpIdx]->selectControlPoint(pointIdx);
+    
+    focusedMappingIndex = warpIdx;
+    prevSelectedIndex = pointIdx;
+}
+
+void ofxRemoteProjectionMapper::handleMouseDown(ofMouseEventArgs& args)
+{
+    if(!selectingMultiple){
+        // Find and select closest control point.
+        selectClosestControlPoint(args.x,args.y);
+        
+        if (focusedMappingIndex < mappings.size())
+        {
+            mappings[focusedMappingIndex]->handleCursorDown(args);
+        }
+    }else{
+        if(!selectionAreaSet){
+            selectionArea = ofRectangle(args, args);
+        }else{
+            for(auto & selected: selectedMappings){
+                mappings[selected]->handleCursorDown(args);
+            }
+        }
+    }
+}
+
+void ofxRemoteProjectionMapper::handleMouseMove(ofMouseEventArgs& args)
+{
+    if(!selectingMultiple){
+        selectClosestControlPoint(args.x,args.y);
+    }
+}
+
+void ofxRemoteProjectionMapper::handleMouseDrag(ofMouseEventArgs& args)
+{
+    if(selectingMultiple){
+        if(!selectionAreaSet){
+            selectionArea = ofRectangle( selectionArea.getTopLeft(), args );
+        }else{
+            for(auto & selected: selectedMappings){
+                mappings[selected]->handleCursorDrag(args);
+            }
+        }
+    }else{
+        if (focusedMappingIndex < mappings.size())
+        {
+            mappings[focusedMappingIndex]->handleCursorDrag(args);
+        }
+    }
+}
+
+void ofxRemoteProjectionMapper::handleMouseUp(ofMouseEventArgs& args)
+{
+    if(selectingMultiple && !selectionAreaSet){
+        selectionAreaSet = true;
+        selectControlPoints(selectionArea);
     }
 }
 
@@ -185,6 +328,7 @@ void ofxRemoteProjectionMapper::loadWarps()
                                                                               .drawArea(drawArea)
                                                                               .srcArea(srcArea)
                                                                               ));
+                mappings.back()->deserialize(warpJson["warp"]);
             }break;
             case WarpSettings::TYPE_BILINEAR:
             {
@@ -195,6 +339,7 @@ void ofxRemoteProjectionMapper::loadWarps()
                                                                               .drawArea(drawArea)
                                                                               .srcArea(srcArea)
                                                                               ));
+                mappings.back()->deserialize(warpJson["warp"]);
             }break;
             case WarpSettings::TYPE_PERSPECTIVE_BILINEAR:
             {
@@ -205,6 +350,7 @@ void ofxRemoteProjectionMapper::loadWarps()
                                                                               .drawArea(drawArea)
                                                                               .srcArea(srcArea)
                                                                               ));
+                mappings.back()->deserialize(warpJson["warp"]);
             }break;
             default:
                 ofLogError() << "RemoteProjectionMapper::loadConfig | UNKNOWN WARP TYPE";
@@ -241,6 +387,10 @@ void ofxRemoteProjectionMapper::saveWarps()
         drawArea["y"] = mapping->getDrawArea().y;
         drawArea["w"] = mapping->getDrawArea().width;
         drawArea["h"] = mapping->getDrawArea().height;
+        
+        nlohmann::json serialized;
+        mapping->serialize(serialized);
+        warp["warp"] = serialized;
         
         warps.push_back(warp);
     }

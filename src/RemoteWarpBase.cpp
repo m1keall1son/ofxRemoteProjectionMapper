@@ -20,8 +20,6 @@ RemoteWarpBase::RemoteWarpBase(const std::string& name, const WarpSettings& sett
     height(480.0f),
     numControlsX(2),
     numControlsY(2),
-    selectedIndex(0),
-    selectedTime(0.0f),
     luminance(0.5f),
     gamma(1.0f),
     exponent(2.0f),
@@ -264,7 +262,7 @@ void RemoteWarpBase::deserialize(const nlohmann::json & json)
         
         int typeAsInt = json["type"];
         type = (WarpSettings::Type)typeAsInt;
-        //brightness = json["brightness"];
+        brightness = json["brightness"];
         
         // Warp parameters.
         {
@@ -285,27 +283,27 @@ void RemoteWarpBase::deserialize(const nlohmann::json & json)
         }
         
         // Blend parameters.
-//        {
-//            const auto & jsonBlend = json["blend"];
-//            
-//            exponent = jsonBlend["exponent"];
-//            
-//            {
-//                std::istringstream iss;
-//                iss.str(jsonBlend["edges"]);
-//                iss >> edges;
-//            }
-//            {
-//                std::istringstream iss;
-//                iss.str(jsonBlend["gamma"]);
-//                iss >> gamma;
-//            }
-//            {
-//                std::istringstream iss;
-//                iss.str(jsonBlend["luminance"]);
-//                iss >> luminance;
-//            }
-//        }
+        {
+            const auto & jsonBlend = json["blend"];
+            
+            exponent = jsonBlend["exponent"];
+            
+            {
+                std::istringstream iss;
+                iss.str(jsonBlend["edges"]);
+                iss >> edges;
+            }
+            {
+                std::istringstream iss;
+                iss.str(jsonBlend["gamma"]);
+                iss >> gamma;
+            }
+            {
+                std::istringstream iss;
+                iss.str(jsonBlend["luminance"]);
+                iss >> luminance;
+            }
+        }
         
         dirty = true;
     }else{
@@ -351,9 +349,9 @@ void RemoteWarpBase::drawWarp(const ofTexture& tex)
         ofPushMatrix();
         ofTranslate(drawArea.x, drawArea.y);
         draw(tex, srcArea);
-        ofPopMatrix();
         if(remoteEditMode)
             drawControlPointNames();
+        ofPopMatrix();
     }
 }
 
@@ -361,7 +359,7 @@ void RemoteWarpBase::queueControlPoint(const glm::vec2 & pos, const ofFloatColor
 {
     if (controlData.size() < MAX_NUM_CONTROL_POINTS)
     {
-        controlData.emplace_back(ControlData(pos, ofFloatColor(1.,1.,1.,1.), .25));
+        controlData.emplace_back(ControlData(pos, color, scale));
     }
 }
 
@@ -372,19 +370,10 @@ void RemoteWarpBase::drawControlPointNames()
     ofFill();
     int i = 0;
     for(auto& cp : controlPoints){
-        auto pos = cp * windowSize;
-        ofDrawBitmapString("cp"+ofToString(i++), pos.x+2+drawArea.x, pos.y+2+drawArea.y);
+        auto pos = cp * glm::vec2(drawArea.width,drawArea.height);
+        ofDrawBitmapString("cp"+ofToString(i++), pos.x+2, pos.y+2);
     }
     ofPopStyle();
-}
-
-//--------------------------------------------------------------
-std::filesystem::path RemoteWarpBase::shaderPath = std::filesystem::path("shaders") / "ofxWarp";
-
-//--------------------------------------------------------------
-void RemoteWarpBase::setShaderPath(const std::filesystem::path shaderPath)
-{
-    RemoteWarpBase::shaderPath = shaderPath;
 }
 
 //--------------------------------------------------------------
@@ -674,24 +663,58 @@ size_t RemoteWarpBase::getNumControlPoints() const
 }
 
 //--------------------------------------------------------------
-size_t RemoteWarpBase::getSelectedControlPoint() const
+std::vector<size_t> RemoteWarpBase::getSelectedControlPoints() const
 {
-    return selectedIndex;
+    std::vector<size_t> sel;
+    for(auto & s : selectedIndices){
+        sel.push_back(s.index);
+    }
+    return sel;
 }
 
 //--------------------------------------------------------------
 void RemoteWarpBase::selectControlPoint(size_t index)
 {
-    if (index >= controlPoints.size() || index == selectedIndex) return;
-    
-    selectedIndex = index;
-    selectedTime = ofGetElapsedTimef();
+    if (index >= controlPoints.size())return;
+    auto found = std::find_if(selectedIndices.begin(), selectedIndices.end(), [index](const Selection& sel){
+        return sel.index == index;
+    });
+    if(found != selectedIndices.end()){
+        return;
+    }else{
+        Selection s;
+        s.index = index;
+        selectedIndices.push_back(s);
+    }
 }
 
 //--------------------------------------------------------------
-void RemoteWarpBase::deselectControlPoint()
+void RemoteWarpBase::deselectControlPoint(size_t index)
 {
-    selectedIndex = -1;
+    if (index >= controlPoints.size())return;
+    auto found = std::find_if(selectedIndices.begin(), selectedIndices.end(), [index](const Selection& sel){
+        return sel.index == index;
+    });
+    if(found != selectedIndices.end())
+        selectedIndices.erase(found);
+}
+
+void RemoteWarpBase::deselectAllControlPoints()
+{
+    selectedIndices.clear();
+}
+
+std::vector<size_t> RemoteWarpBase::getControlPointsInArea(const ofRectangle& area)
+{
+    std::vector<size_t> indices;
+    for (auto i = 0; i < controlPoints.size(); ++i)
+    {
+        auto cpPos = getControlPoint(i) * glm::vec2(drawArea.width,drawArea.height) + drawArea.getTopLeft();
+        if(area.inside(cpPos)){
+            indices.push_back(i);
+        }
+    }
+    return indices;
 }
 
 //--------------------------------------------------------------
@@ -702,7 +725,8 @@ size_t RemoteWarpBase::findClosestControlPoint(const glm::vec2 & pos, float * di
     
     for (auto i = 0; i < controlPoints.size(); ++i)
     {
-        auto candidate = glm::distance(pos, getControlPoint(i) * windowSize);
+        auto cpPos = getControlPoint(i) * glm::vec2(drawArea.width,drawArea.height) + drawArea.getTopLeft();
+        auto candidate = glm::distance(pos, cpPos);
         if (candidate < minDistance)
         {
             minDistance = candidate;
@@ -735,8 +759,7 @@ void RemoteWarpBase::queueControlPoint(const glm::vec2 & pos, bool selected, boo
     }
     else if (selected)
     {
-        auto scale = 0.9f + 0.2f * sinf(6.0f * (ofGetElapsedTimef() - selectedTime));
-        queueControlPoint(pos, ofFloatColor(0.9f, 0.9f, 0.9f), scale);
+        queueControlPoint(pos, ofFloatColor(0.9f, 0.9f, 0.9f), 1.1f);
     }
     else if (attached)
     {
@@ -856,23 +879,27 @@ void RemoteWarpBase::drawControlPoints()
 //--------------------------------------------------------------
 bool RemoteWarpBase::handleCursorDown(const glm::vec2 & pos)
 {
-    if (!editing || selectedIndex >= controlPoints.size()) return false;
+    if (!editing || selectedIndices.empty()) return false;
     
-    // Calculate offset by converting control point from normalized to screen space.
-    glm::vec2 screenPoint = (getControlPoint(selectedIndex) * windowSize);
-    selectedOffset = pos - screenPoint;
-    
+    for(auto & selection : selectedIndices){
+        // Calculate offset by converting control point from normalized to screen space.
+        auto cpPos = getControlPoint(selection.index) * ofGetWindowSize();
+        glm::vec2 screenPoint = cpPos;
+        selection.offset = pos - screenPoint;
+    }
+
     return true;
 }
 
 //--------------------------------------------------------------
 bool RemoteWarpBase::handleCursorDrag(const glm::vec2 & pos)
 {
-    if (!editing || selectedIndex >= controlPoints.size()) return false;
-    
-    // Set control point in normalized space.
-    glm::vec2 screenPoint = pos - selectedOffset;
-    setControlPoint(selectedIndex, screenPoint / windowSize);
+    if (!editing || selectedIndices.empty()) return false;
+
+    for(auto & selection : selectedIndices){
+        glm::vec2 screenPoint = pos - selection.offset;
+        setControlPoint(selection.index, screenPoint / ofGetWindowSize());
+    }
     
     dirty = true;
     

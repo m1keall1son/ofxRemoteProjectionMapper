@@ -103,7 +103,7 @@ RemoteWarpBilinear::RemoteWarpBilinear(const std::string& name, const WarpSettin
         this->shader.bindDefaults();
         this->shader.linkProgram();
     }
-
+    
     RUI_SHARE_PARAM_WCN(warpName+"-adaptive",adaptive);
     RUI_SHARE_PARAM_WCN(warpName+"-linear",linear);
     RUI_SHARE_PARAM_WCN(warpName+"-numControlsX",remoteNumControlsX,2,10);
@@ -326,12 +326,15 @@ void RemoteWarpBilinear::drawTexture(const ofTexture & texture, const ofRectangl
 //--------------------------------------------------------------
 void RemoteWarpBilinear::drawControls()
 {
-    if (this->editing && this->selectedIndex < this->controlPoints.size())
+    if (this->editing)
     {
         // Draw control points.
         for (auto i = 0; i < this->controlPoints.size(); ++i)
         {
-            this->queueControlPoint(this->getControlPoint(i) * this->windowSize, i == this->selectedIndex);
+            auto found = std::find_if(selectedIndices.begin(), selectedIndices.end(),[i](const Selection& s){
+                return s.index == i;
+            });
+            this->queueControlPoint(this->getControlPoint(i) * this->windowSize, found != selectedIndices.end());
         }
         
         this->drawControlPoints();
@@ -429,6 +432,7 @@ void RemoteWarpBilinear::setupMesh(int resolutionX, int resolutionY)
             // Tex Coord.
             float tx = ofLerp(this->corners.x, this->corners.z, x / (float)(this->resolutionX - 1));
             float ty = ofLerp(this->corners.y, this->corners.w, y / (float)(this->resolutionY - 1));
+            
             texCoords[j++] = glm::vec2(tx, ty);
         }
     }
@@ -644,7 +648,7 @@ void RemoteWarpBilinear::setNumControlsX(int n)
     
     // Find new closest control point.
     float distance;
-    this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
+    //this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
     
     this->dirty = true;
     
@@ -738,7 +742,7 @@ void RemoteWarpBilinear::setNumControlsY(int n)
     
     // Find new closest control point.
     float distance;
-    this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
+    //this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
     
     this->dirty = true;
     
@@ -802,7 +806,7 @@ void RemoteWarpBilinear::flipHorizontal()
     
     // Find new closest control point.
     float distance;
-    this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
+    //this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
 }
 
 //--------------------------------------------------------------
@@ -822,6 +826,6 @@ void RemoteWarpBilinear::flipVertical()
     
     // Find new closest control point.
     float distance;
-    this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
+    //this->selectedIndex = this->findClosestControlPoint(glm::vec2(ofGetMouseX(), ofGetMouseY()), &distance);
 }
 

@@ -8,6 +8,7 @@
 #pragma once
 
 #include "ofxRemoteUIServer.h"
+#include <list>
 
 #define OF_GLSL(vers, code) "#version "#vers"\n "#code
 
@@ -153,13 +154,18 @@ public:
     //! get the number of control points
     virtual size_t getNumControlPoints() const;
     //! get the index of the currently selected control point
-    virtual size_t getSelectedControlPoint() const;
+    virtual std::vector<size_t> getSelectedControlPoints() const;
     //! select one of the control points
     virtual void selectControlPoint(size_t index);
     //! deselect the selected control point
-    virtual void deselectControlPoint();
+    virtual void deselectControlPoint(size_t index);
+    //! deselect the selected control point
+    virtual void deselectAllControlPoints();
     //! return the index of the closest control point, as well as the distance in pixels
     virtual size_t findClosestControlPoint(const glm::vec2 & pos, float * distance);
+    
+    //!return a list of controlpoints inside a specific area
+    virtual std::vector<size_t> getControlPointsInArea(const ofRectangle& area);
     
     //! return the number of control points columns
     size_t getNumControlsX() const;
@@ -176,9 +182,7 @@ public:
     virtual bool handleCursorDrag(const glm::vec2 & pos);
     
     virtual bool handleWindowResize(int width, int height);
-    
-    static void setShaderPath(const std::filesystem::path shaderPath);
-    
+        
 protected:
     
     //! draw a warped texture
@@ -250,19 +254,20 @@ protected:
     int numControlsY;
     std::vector<glm::vec2> controlPoints;
     
-    size_t selectedIndex;
-    float selectedTime;
-    glm::vec2 selectedOffset;
+    struct Selection {
+        size_t index;
+        glm::vec2 offset;
+    };
     
+    std::list<Selection> selectedIndices;
+  
     glm::vec3 luminance;
     glm::vec3 gamma;
     float exponent;
     glm::vec4 edges;
     
     static const int MAX_NUM_CONTROL_POINTS = 1024;
-    
-    static std::filesystem::path shaderPath;
-    
+        
     typedef enum
     {
         INSTANCE_POS_SCALE_ATTRIBUTE = 5,

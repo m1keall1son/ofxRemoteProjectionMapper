@@ -83,8 +83,6 @@ RemoteWarpPerspective::RemoteWarpPerspective(const std::string& name, const Warp
         this->shader.bindDefaults();
         this->shader.linkProgram();
     }
-    //this->shader.setupShaderFromFile(GL_VERTEX_SHADER, ofToDataPath("shaders/ofxWarp/WarpPerspective.vert"));
-    //this->shader.setupShaderFromFile(GL_FRAGMENT_SHADER, ofToDataPath("shaders/ofxWarp/WarpPerspective.frag"));
     
     RUI_SHARE_PARAM_WCN(warpName+"-flipVertical",remoteFlipV);
     RUI_SHARE_PARAM_WCN(warpName+"-flipHorizontal",remoteFlipH);
@@ -296,12 +294,15 @@ void RemoteWarpPerspective::drawTexture(const ofTexture & texture, const ofRecta
 //--------------------------------------------------------------
 void RemoteWarpPerspective::drawControls()
 {
-    if (this->editing && this->selectedIndex < this->controlPoints.size())
+    if (this->editing)
     {
         // Draw control points.
         for (auto i = 0; i < 4; ++i)
         {
-            this->queueControlPoint(dstPoints[i], i == this->selectedIndex);
+            auto found = std::find_if(selectedIndices.begin(), selectedIndices.end(),[i](const Selection& s){
+                return s.index == i;
+            });
+            this->queueControlPoint(dstPoints[i], found != selectedIndices.end());
         }
         
         this->drawControlPoints();
@@ -314,7 +315,9 @@ void RemoteWarpPerspective::rotateClockwise()
     std::swap(this->controlPoints[3], this->controlPoints[0]);
     std::swap(this->controlPoints[0], this->controlPoints[1]);
     std::swap(this->controlPoints[1], this->controlPoints[2]);
-    this->selectedIndex = (this->selectedIndex + 3) % 4;
+    if(selectedIndices.size() == 1){
+        selectedIndices.front().index = (selectedIndices.front().index + 3) % 4;
+    }
     this->dirty = true;
 }
 
@@ -324,7 +327,9 @@ void RemoteWarpPerspective::rotateCounterclockwise()
     std::swap(this->controlPoints[1], this->controlPoints[2]);
     std::swap(this->controlPoints[0], this->controlPoints[1]);
     std::swap(this->controlPoints[3], this->controlPoints[0]);
-    this->selectedIndex = (this->selectedIndex + 1) % 4;
+    if(selectedIndices.size() == 1){
+        selectedIndices.front().index = (selectedIndices.front().index + 1) % 4;
+    }
     this->dirty = true;
 }
 
@@ -333,13 +338,16 @@ void RemoteWarpPerspective::flipHorizontal()
 {
     std::swap(this->controlPoints[0], this->controlPoints[1]);
     std::swap(this->controlPoints[2], this->controlPoints[3]);
-    if (this->selectedIndex % 2)
-    {
-        --this->selectedIndex;
-    }
-    else
-    {
-        ++this->selectedIndex;
+    
+    if(selectedIndices.size() == 1){
+        if (selectedIndices.front().index % 2)
+        {
+            --selectedIndices.front().index;
+        }
+        else
+        {
+            ++selectedIndices.front().index;
+        }
     }
     this->dirty = true;
 }
@@ -349,7 +357,11 @@ void RemoteWarpPerspective::flipVertical()
 {
     std::swap(this->controlPoints[0], this->controlPoints[3]);
     std::swap(this->controlPoints[1], this->controlPoints[2]);
-    this->selectedIndex = (this->controlPoints.size() - 1) - this->selectedIndex;
+    
+    if(selectedIndices.size() == 1){
+        selectedIndices.front().index = (this->controlPoints.size() - 1) - selectedIndices.front().index;
+    }
+    
     this->dirty = true;
 }
 

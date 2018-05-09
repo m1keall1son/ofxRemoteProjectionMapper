@@ -61,8 +61,18 @@ public:
     //set the size of the content to be desiplayed by the next remotely created warps
     inline void setContentSize(int width, int height){ contentSize = glm::ivec2(width, height); }
     
+    void selectClosestControlPoint(int x, int y);
+    void selectControlPoints(const ofRectangle& area);
+
 private:
     
+    void handleMouseDown(ofMouseEventArgs& args);
+    void handleMouseDrag(ofMouseEventArgs& args);
+    void handleMouseMove(ofMouseEventArgs& args);
+    void handleMouseUp(ofMouseEventArgs& args);
+    void handleKeyPress(ofKeyEventArgs& args);
+    void handleKeyReleased(ofKeyEventArgs& args);
+
     void createPerspectiveWarp();
     void createBiliearWarp();
     void createPerspectiveBilinearWarp();
@@ -74,7 +84,13 @@ private:
     std::string nextWarpName{"Next Warp"};
     std::string lastWarpName;
     ofRectangle nextWarpSrcArea;
+    ofRectangle selectionArea;
     std::filesystem::path saveLocation;
+    std::vector<int> selectedMappings;
+    int focusedMappingIndex{0};
+    int prevSelectedIndex{0};
+    bool selectingMultiple{false};
+    bool selectionAreaSet{false};
     bool doCreatePerspectiveWarp{false};
     bool doCreateBilinearWarp{false};
     bool doCreatePerspectiveBilinearWarp{false};

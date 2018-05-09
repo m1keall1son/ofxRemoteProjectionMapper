@@ -32,7 +32,7 @@ public:
     //! select one of the control points
     virtual void selectControlPoint(size_t index) override;
     //! deselect the selected control point
-    virtual void deselectControlPoint() override;
+    virtual void deselectControlPoint(size_t index) override;
     
     virtual void rotateClockwise() override;
     virtual void rotateCounterclockwise() override;

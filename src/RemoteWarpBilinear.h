@@ -42,6 +42,9 @@ public:
     //! set the number of vertical control points for this warp
     void setNumControlsY(int n);
     
+    void subdivideX( float percent );
+    void subdivideY( float percent );
+    
     void setCorners(float left, float top, float right, float bottom);
     
     virtual void rotateClockwise() override;
@@ -50,6 +53,7 @@ public:
     virtual void flipHorizontal() override;
     virtual void flipVertical() override;
     
+
 protected:
     //! draw a specific area of a warped texture to a specific region
     virtual void drawTexture(const ofTexture & texture, const ofRectangle & srcBounds, const ofRectangle & dstBounds) override;
@@ -91,6 +95,7 @@ protected:
     int resolutionX;
     //! number of vertical quads
     int resolutionY;
+
     
     //remoteUI
     int remoteNumControlsX{2};
