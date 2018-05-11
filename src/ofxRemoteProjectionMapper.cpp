@@ -338,7 +338,6 @@ void ofxRemoteProjectionMapper::loadWarps()
                                                                               .drawArea(drawArea)
                                                                               .srcArea(srcArea)
                                                                               ));
-                mappings.back()->deserialize(warpJson["warp"]);
             }break;
             case WarpSettings::TYPE_BILINEAR:
             {
@@ -349,7 +348,6 @@ void ofxRemoteProjectionMapper::loadWarps()
                                                                               .drawArea(drawArea)
                                                                               .srcArea(srcArea)
                                                                               ));
-                mappings.back()->deserialize(warpJson["warp"]);
             }break;
             case WarpSettings::TYPE_PERSPECTIVE_BILINEAR:
             {
@@ -360,13 +358,14 @@ void ofxRemoteProjectionMapper::loadWarps()
                                                                               .drawArea(drawArea)
                                                                               .srcArea(srcArea)
                                                                               ));
-                mappings.back()->deserialize(warpJson["warp"]);
+               
             }break;
             default:
                 ofLogError() << "RemoteProjectionMapper::loadConfig | UNKNOWN WARP TYPE";
                 break;
         }
-
+        mappings.back()->deserialize(warpJson["warp"]);
+        mappings.back()->loadPreset(warpJson["warp"]["preset"]);
     }
     
 }

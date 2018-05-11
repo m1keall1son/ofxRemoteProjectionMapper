@@ -182,6 +182,8 @@ public:
     virtual bool handleCursorDrag(const glm::vec2 & pos);
     
     virtual bool handleWindowResize(int width, int height);
+    
+    virtual void loadPreset(const std::string& preset);
         
 protected:
     

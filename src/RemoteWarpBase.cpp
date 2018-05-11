@@ -98,6 +98,14 @@ RemoteWarpBase::RemoteWarpBase(const std::string& name, const WarpSettings& sett
     
 }
 
+void RemoteWarpBase::loadPreset(const std::string& preset){
+    if(std::filesystem::exists(saveLocation/preset/RemoteWarpBase::sSaveFilename)){
+        currentPreset = preset;
+        loadControlPoints(saveLocation/currentPreset/RemoteWarpBase::sSaveFilename);
+        dirty = true;
+    }
+}
+
 void RemoteWarpBase::handleRemoteUpdate(RemoteUIServerCallBackArg & arg)
 {    
     switch (arg.action) {
